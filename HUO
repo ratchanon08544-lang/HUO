@@ -1,0 +1,448 @@
+--[========================================================--
+--   Uranus HUB - Ultimate FPS Booster (V.9 Optimized)     --
+--[========================================================--
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = Workspace.CurrentCamera
+
+-- ป้องกันรันซ้ำ
+if PlayerGui:FindFirstChild("UranusFPSBoosterV9") then
+    PlayerGui.UranusFPSBoosterV9:Destroy()
+end
+
+-- สร้าง ScreenGui หลัก
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UranusFPSBoosterV9"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.ResetOnSpawn = false
+
+-- ปุ่มเปิด-ปิด UI แบบลอย
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Text = "🤖"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 200)
+ToggleBtn.TextSize = 22
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleCorner.Parent = ToggleBtn
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = Color3.fromRGB(0, 255, 200)
+ToggleStroke.Thickness = 2
+ToggleStroke.Parent = ToggleBtn
+
+-- กรอบ UI หลัก (แบบแนวนอน)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 480, 0, 300)
+MainFrame.Visible = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(70, 70, 110)
+MainStroke.Thickness = 1.5
+MainStroke.Parent = MainFrame
+
+-- ส่วนหัว (Header)
+local Header = Instance.new("Frame")
+Header.Parent = MainFrame
+Header.BackgroundColor3 = Color3.fromRGB(28, 28, 42)
+Header.Size = UDim2.new(1, 0, 0, 45)
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+local FixHeader = Instance.new("Frame")
+FixHeader.Parent = Header
+FixHeader.BackgroundColor3 = Color3.fromRGB(28, 28, 42)
+FixHeader.BorderSizePixel = 0
+FixHeader.Position = UDim2.new(0, 0, 0.7, 0)
+FixHeader.Size = UDim2.new(1, 0, 0.3, 0)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Header
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Size = UDim2.new(0, 260, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "🤖 Uranus Hub | FPS Optimizer (Fixed)"
+Title.TextColor3 = Color3.fromRGB(0, 255, 200)
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ข้อความแสดง FPS และ Ping บน Header
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Parent = Header
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Position = UDim2.new(0, 230, 0, 0)
+StatsLabel.Size = UDim2.new(0, 175, 1, 0)
+StatsLabel.Font = Enum.Font.GothamBold
+StatsLabel.Text = "FPS: 60 | Ping: 0ms"
+StatsLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+StatsLabel.TextSize = 11
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+-- ปุ่มพับหน้าต่าง (Minimize Button)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Parent = Header
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+MinimizeBtn.Position = UDim2.new(1, -38, 0.5, -13)
+MinimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 15
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 6)
+MinCorner.Parent = MinimizeBtn
+
+-- อัปเดตค่า FPS และ Ping แบบเรียลไทม์ (ปรับลดความถี่เพื่อไม่ให้กินเครื่อง)
+local lastUpdate = 0
+local frameCount = 0
+local currentFPS = 60
+
+RunService.RenderStepped:Connect(function(dt)
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastUpdate >= 1.0 then -- อัปเดตทุกๆ 1 วินาทีแทน เพื่อลดภาระ
+        currentFPS = math.floor(frameCount / (now - lastUpdate))
+        frameCount = 0
+        lastUpdate = now
+    end
+    
+    local pingValue = 0
+    pcall(function()
+        pingValue = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+    
+    StatsLabel.Text = "FPS: " .. currentFPS .. " | Ping: " .. pingValue .. "ms"
+end)
+
+-- คอนเทนต์ข้างใน (Scrolling Container)
+local Container = Instance.new("ScrollingFrame")
+Container.Parent = MainFrame
+Container.BackgroundTransparency = 1
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.Size = UDim2.new(1, -20, 1, -65)
+Container.CanvasSize = UDim2.new(0, 0, 0, 490)
+Container.ScrollBarThickness = 3
+Container.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 200)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = Container
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+
+local data_id = 0
+local function CreateToggleOption(name, desc, callback)
+    data_id = data_id + 1
+    
+    local ItemFrame = Instance.new("Frame")
+    ItemFrame.Parent = Container
+    ItemFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 44)
+    ItemFrame.Size = UDim2.new(1, 0, 0, 52)
+    ItemFrame.LayoutOrder = data_id
+    
+    local ItemCorner = Instance.new("UICorner")
+    ItemCorner.CornerRadius = UDim.new(0, 10)
+    ItemCorner.Parent = ItemFrame
+    
+    local LabelTitle = Instance.new("TextLabel")
+    LabelTitle.Parent = ItemFrame
+    LabelTitle.BackgroundTransparency = 1
+    LabelTitle.Position = UDim2.new(0, 14, 0, 8)
+    LabelTitle.Size = UDim2.new(0, 330, 0, 18)
+    LabelTitle.Font = Enum.Font.GothamBold
+    LabelTitle.Text = name
+    LabelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LabelTitle.TextSize = 12
+    LabelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local LabelDesc = Instance.new("TextLabel")
+    LabelDesc.Parent = ItemFrame
+    LabelDesc.BackgroundTransparency = 1
+    LabelDesc.Position = UDim2.new(0, 14, 0, 27)
+    LabelDesc.Size = UDim2.new(0, 330, 0, 18)
+    LabelDesc.Font = Enum.Font.Gotham
+    LabelDesc.Text = desc
+    LabelDesc.TextColor3 = Color3.fromRGB(150, 150, 175)
+    LabelDesc.TextSize = 10
+    LabelDesc.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local SwitchBtn = Instance.new("TextButton")
+    SwitchBtn.Parent = ItemFrame
+    SwitchBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    SwitchBtn.Position = UDim2.new(1, -65, 0.5, -14)
+    SwitchBtn.Size = UDim2.new(0, 52, 0, 28)
+    SwitchBtn.Font = Enum.Font.GothamBold
+    SwitchBtn.Text = "OFF"
+    SwitchBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    SwitchBtn.TextSize = 11
+    
+    local SwitchCorner = Instance.new("UICorner")
+    SwitchCorner.CornerRadius = UDim.new(1, 0)
+    SwitchCorner.Parent = SwitchBtn
+    
+    local active = false
+    SwitchBtn.MouseButton1Click:Connect(function()
+        active = not active
+        if active then
+            SwitchBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 130)
+            SwitchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SwitchBtn.Text = "ON"
+        else
+            SwitchBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+            SwitchBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+            SwitchBtn.Text = "OFF"
+        end
+        callback(active)
+    end)
+end
+
+local function CreateModeSelector(name, callbackDay, callbackNight)
+    data_id = data_id + 1
+    
+    local ItemFrame = Instance.new("Frame")
+    ItemFrame.Parent = Container
+    ItemFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 44)
+    ItemFrame.Size = UDim2.new(1, 0, 0, 52)
+    ItemFrame.LayoutOrder = data_id
+    
+    local ItemCorner = Instance.new("UICorner")
+    ItemCorner.CornerRadius = UDim.new(0, 10)
+    ItemCorner.Parent = ItemFrame
+    
+    local LabelTitle = Instance.new("TextLabel")
+    LabelTitle.Parent = ItemFrame
+    LabelTitle.BackgroundTransparency = 1
+    LabelTitle.Position = UDim2.new(0, 14, 0, 16)
+    LabelTitle.Size = UDim2.new(0, 260, 0, 20)
+    LabelTitle.Font = Enum.Font.GothamBold
+    LabelTitle.Text = name
+    LabelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LabelTitle.TextSize = 12
+    LabelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local NightBtn = Instance.new("TextButton")
+    NightBtn.Parent = ItemFrame
+    NightBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 65)
+    NightBtn.Position = UDim2.new(1, -118, 0.5, -14)
+    NightBtn.Size = UDim2.new(0, 52, 0, 28)
+    NightBtn.Font = Enum.Font.GothamBold
+    NightBtn.Text = "🌙 มืด"
+    NightBtn.TextColor3 = Color3.fromRGB(180, 180, 255)
+    NightBtn.TextSize = 11
+    
+    local NC = Instance.new("UICorner")
+    NC.CornerRadius = UDim.new(0, 8)
+    NC.Parent = NightBtn
+    
+    local DayBtn = Instance.new("TextButton")
+    DayBtn.Parent = ItemFrame
+    DayBtn.BackgroundColor3 = Color3.fromRGB(65, 55, 35)
+    DayBtn.Position = UDim2.new(1, -60, 0.5, -14)
+    DayBtn.Size = UDim2.new(0, 52, 0, 28)
+    DayBtn.Font = Enum.Font.GothamBold
+    DayBtn.Text = "☀ สว่าง"
+    DayBtn.TextColor3 = Color3.fromRGB(255, 220, 130)
+    DayBtn.TextSize = 11
+    
+    local DC = Instance.new("UICorner")
+    DC.CornerRadius = UDim.new(0, 8)
+    DC.Parent = DayBtn
+    
+    NightBtn.MouseButton1Click:Connect(callbackNight)
+    DayBtn.MouseButton1Click:Connect(callbackDay)
+end
+
+-- ระบบพับเปิด-ปิด UI
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    Container.Visible = not isMinimized
+    MainFrame:TweenSize(
+        isMinimized and UDim2.new(0, 480, 0, 45) or UDim2.new(0, 480, 0, 300),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.2,
+        true
+    )
+    MinimizeBtn.Text = isMinimized and "+" or "-"
+end)
+
+local uiVisible = true
+ToggleBtn.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    MainFrame.Visible = uiVisible
+end)
+
+--[ ฟังก์ชัน 1: ล็อกหน้าจอนิ่ง / ลดการสั่น ]--
+CreateToggleOption("ล็อกหน้าจอนิ่ง / ลดการสั่น (Anti-Shake)", "ป้องกันหน้าจอสั่นเวลาโดนระเบิด/เอฟเฟค", function(state)
+    if state then
+        _G.ShakeConnection = RunService.RenderStepped:Connect(function()
+            pcall(function()
+                if Camera then
+                    for _, v in pairs(Camera:GetChildren()) do
+                        if v:IsA("CameraShakeInstance") or v.Name:lower():find("shake") then
+                            v:Destroy()
+                        end
+                    end
+                end
+            end)
+        end)
+    else
+        if _G.ShakeConnection then _G.ShakeConnection:Disconnect() _G.ShakeConnection = nil end
+    end
+end)
+
+--[ ฟังก์ชัน 2: โหมดดินน้ำมัน (Smooth Plastic) - แบบไม่หน่วง ]--
+CreateToggleOption("โหมดดินน้ำมัน (Smooth Plastic)", "เปลี่ยนพื้นผิววัตถุรอบตัวครั้งเดียวเพื่อเพิ่ม FPS", function(state)
+    if state then
+        task.spawn(function()
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if (v:IsA("BasePart") or v:IsA("MeshPart")) and not v:IsDescendantOf(LocalPlayer.Character) then
+                    v.Material = Enum.Material.SmoothPlastic
+                end
+            end
+        end)
+    else
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+end)
+
+--[ ฟังก์ชัน 3: โหมดภาพสีเทา (Gray Theme) - แบบไม่หน่วง ]--
+CreateToggleOption("โหมดภาพสีเทา (Gray Theme)", "เปลี่ยนสีพื้นผิวและวัตถุทั้งหมดให้เป็นสีเทา", function(state)
+    if state then
+        task.spawn(function()
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if (v:IsA("BasePart") or v:IsA("MeshPart")) and not v:IsDescendantOf(LocalPlayer.Character) then
+                    v.Color = Color3.fromRGB(130, 130, 130)
+                    v.Reflectance = 0
+                end
+            end
+        end)
+    else
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+end)
+
+--[ ฟังก์ชัน 4: ลบต้นไม้และใบไม้ ]--
+CreateToggleOption("ลบต้นไม้และใบไม้ (Remove Trees)", "ลบต้นไม้และพุ่มไม้ออกเพื่อเพิ่ม FPS มหาศาล", function(state)
+    local function checkAndRemove(obj)
+        if obj:IsA("Model") or obj:IsA("BasePart") then
+            local name = string.lower(obj.Name)
+            if name:find("tree") or name:find("plant") or name:find("bush") or name:find("leaf") or name:find("leaves") then
+                obj:Destroy()
+            end
+        end
+    end
+
+    if state then
+        task.spawn(function()
+            for _, v in pairs(Workspace:GetDescendants()) do
+                checkAndRemove(v)
+            end
+        end)
+        _G.TreeTracker = Workspace.DescendantAdded:Connect(function(v)
+            task.spawn(function() checkAndRemove(v) end)
+        end)
+    else
+        if _G.TreeTracker then _G.TreeTracker:Disconnect() _G.TreeTracker = nil end
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+end)
+
+--[ ฟังก์ชัน 5: ตัวละครสีเทา ]--
+CreateToggleOption("ตัวละครสีเทา (Gray Characters)", "บังคับเปลี่ยนสีตัวละครผู้เล่นอื่นให้เป็นสีเทา", function(state)
+    local function makeGrayChar(char)
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("MeshPart") then
+                part.Material = Enum.Material.SmoothPlastic
+                part.Color = Color3.fromRGB(120, 120, 120)
+            elseif part:IsA("Clothing") or part:IsA("ShirtGraphic") then
+                part:Destroy()
+            end
+        end
+    end
+
+    if state then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character then makeGrayChar(p.Character) end
+            p.CharacterAdded:Connect(function(char)
+                task.wait(0.5)
+                makeGrayChar(char)
+            end)
+        end
+    else
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+    end
+end)
+
+--[ ฟังก์ชัน 6: ลบเงาและลดแสง ]--
+CreateToggleOption("ลบเงาและลดแสง (No Shadows & Optimize)", "ปิดเงาและปรับแสงให้สว่างโล่งเพื่อเพิ่ม FPS", function(state)
+    if state then
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 1.5
+        Lighting.FogEnd = 999999
+        for _, v in pairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") then
+                v.Enabled = false
+            end
+        end
+    else
+        Lighting.GlobalShadows = true
+        Lighting.Brightness = 2
+    end
+end)
+
+--[ ฟังก์ชัน 7: เคลียร์เอฟเฟคสกิล ]--
+CreateToggleOption("เคลียร์เอฟเฟคสกิล", "ลบ Particle / Trail ไม่ให้เครื่องกระตุก", function(state)
+    if state then
+        task.spawn(function()
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Sparkles") then
+                    v:Destroy()
+                end
+            end
+        end)
+        _G.EffectCleaner = Workspace.DescendantAdded:Connect(function(v)
+            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Sparkles") then
+                pcall(function() v:Destroy() end)
+            end
+        end)
+    else
+        if _G.EffectCleaner then _G.EffectCleaner:Disconnect() _G.EffectCleaner = nil end
+    end
+end)
+
+--[ ฟังก์ชัน 8: ล็อกท้องฟ้า ]--
+CreateModeSelector("ล็อกบรรยากาศท้องฟ้า", function()
+    Lighting.ClockTime = 14.5
+    Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+end, function()
+    Lighting.ClockTime = 0
+    Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 50)
+end)
+
+print("Uranus Hub V.9 Optimized Loaded Successfully!")

@@ -1,0 +1,160 @@
+-- Anti-AFK with Custom Neon UI
+-- Compatible with Delta, Fluxus, Codex, Hydrogent, etc.
+
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Prevent Duplicates
+if CoreGui:FindFirstChild("AntiAFK_UI") then
+    CoreGui:FindFirstChild("AntiAFK_UI"):Destroy()
+end
+
+-- ScreenGui Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AntiAFK_UI"
+ScreenGui.ResetOnSpawn = false
+
+-- Attach to CoreGui if possible, else PlayerGui
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = CoreGui
+end
+
+-- Main Frame (Draggable)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 220, 0, 130)
+MainFrame.Position = UDim2.new(0.5, -110, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local MainUICorner = Instance.new("UICorner")
+MainUICorner.CornerRadius = UDim.new(0, 10)
+MainUICorner.Parent = MainFrame
+
+local MainUIStroke = Instance.new("UIStroke")
+MainUIStroke.Color = Color3.fromRGB(0, 255, 170)
+MainUIStroke.Thickness = 1.5
+MainUIStroke.Parent = MainFrame
+
+-- Title Label
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -30, 0, 35)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🛡️ ANTI-AFK SYSTEM"
+TitleLabel.TextColor3 = Color3.fromRGB(0, 255, 170)
+TitleLabel.TextSize = 14
+TitleLabel.Font = Enum.Font.FredokaOne
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+-- Toggle Status Text
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 20)
+StatusLabel.Position = UDim2.new(0, 10, 0, 35)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: ACTIVE ✅"
+StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusLabel.TextSize = 12
+StatusLabel.Font = Enum.Font.SourceSansBold
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = MainFrame
+
+-- Toggle Button
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(1, -20, 0, 35)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 65)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 130)
+ToggleBtn.Text = "DISABLE ANTI-AFK"
+ToggleBtn.TextColor3 = Color3.fromRGB(15, 15, 20)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.FredokaOne
+ToggleBtn.AutoButtonColor = false
+ToggleBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = ToggleBtn
+
+-- Minimize / Close Button
+local MiniBtn = Instance.new("TextButton")
+MiniBtn.Size = UDim2.new(0, 25, 0, 25)
+MiniBtn.Position = UDim2.new(1, -30, 0, 5)
+MiniBtn.BackgroundTransparency = 1
+MiniBtn.Text = "—"
+MiniBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+MiniBtn.TextSize = 14
+MiniBtn.Font = Enum.Font.SourceSansBold
+MiniBtn.Parent = MainFrame
+
+-- Floating Toggle Icon (When Minimized)
+local FloatBtn = Instance.new("TextButton")
+FloatBtn.Name = "FloatBtn"
+FloatBtn.Size = UDim2.new(0, 45, 0, 45)
+FloatBtn.Position = UDim2.new(0.02, 0, 0.4, 0)
+FloatBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+FloatBtn.Text = "🛡️"
+FloatBtn.TextSize = 20
+FloatBtn.Visible = false
+FloatBtn.Active = true
+FloatBtn.Draggable = true
+FloatBtn.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1, 0)
+FloatCorner.Parent = FloatBtn
+
+local FloatStroke = Instance.new("UIStroke")
+FloatStroke.Color = Color3.fromRGB(0, 255, 170)
+FloatStroke.Thickness = 1.5
+FloatStroke.Parent = FloatBtn
+
+-- Logic & Functionality
+local AntiAfkEnabled = true
+
+-- Anti-AFK Connections
+LocalPlayer.Idled:Connect(function()
+    if AntiAfkEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+-- Toggle Functionality
+ToggleBtn.MouseButton1Click:Connect(function()
+    AntiAfkEnabled = not AntiAfkEnabled
+    if AntiAfkEnabled then
+        ToggleBtn.Text = "DISABLE ANTI-AFK"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 130)
+        StatusLabel.Text = "Status: ACTIVE ✅"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        ToggleBtn.Text = "ENABLE ANTI-AFK"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        StatusLabel.Text = "Status: DISABLED ❌"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end)
+
+-- Minimize Functionality
+MiniBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    FloatBtn.Visible = true
+end)
+
+FloatBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    FloatBtn.Visible = false
+end)
